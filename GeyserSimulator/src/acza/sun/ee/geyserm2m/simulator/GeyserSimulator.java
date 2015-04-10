@@ -52,7 +52,7 @@ public class GeyserSimulator {
 			 * Start api_timeout count down thread "Interrupt timer routine"
 			 * Set Control_mode to default
 			 * Reads persistence file 
-			 * Initialize virtual geyser.
+			 * Initialize VirtualGeyser(usage event file);
 			 	* Calculates time elapsed between fail-over and restart.
 			 	* Fast-forwards virtual geyser up to current time.
 		 */
@@ -66,7 +66,8 @@ public class GeyserSimulator {
 				 * OPEN:
 				 * 		- Switch element according to user suggestion 
 			 * 
-			 * Step virtual geyser. 
+			 * Step virtual geyser.
+			 * Persist geyser data (later though) 
 			 * 
 			 * 
 			 * API Command server:
@@ -78,7 +79,9 @@ public class GeyserSimulator {
 			 		* or post reply data in out-bound buffer.
 			 		* 
 		 * 
-		 * sleep 1 second.
+		 * wait for 5 second mark using real time.
+		 * (The simulation period has to be exact since the usage event file is exact)
+		 * 
 		 * LOOP
 		 */
 		
@@ -91,6 +94,7 @@ public class GeyserSimulator {
 		 * Thread starts when OPEN-LOOP CONTROL message is passed.
 		 * (Every time TCP activity occurs, api_timeout = API_TIMEOUT_RESET.)
 		 * If time runs out --> control_mode = CLOSED and thread dies;
+		 * 
 	 */
 	
 	// --------------------------- LISTENERS --------------------------

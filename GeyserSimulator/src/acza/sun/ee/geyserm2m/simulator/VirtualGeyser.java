@@ -23,12 +23,13 @@ public class VirtualGeyser {
 	private boolean valve_state;
 	
 	
-	public VirtualGeyser(){
-		
+	public VirtualGeyser(/* UsageEventFile.csv */){
+		//Reads file into memory
 	}
 	
 	public void step(int t_delta){
 		
+		// Must include randomized failures.
 	}
 	
 	
