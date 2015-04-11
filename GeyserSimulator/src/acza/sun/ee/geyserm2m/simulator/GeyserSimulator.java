@@ -41,7 +41,7 @@ public class GeyserSimulator {
 	 */
 	public static void main(String [] args)
 	{
-		System.out.println("Baby steps");
+		System.out.println("Project: Baby steps.\n");
 		
 		/*
 		 * Initialize
@@ -51,13 +51,17 @@ public class GeyserSimulator {
 			 	* transmits data present in the out-bound buffer.
 			 * Start api_timeout count down thread "Interrupt timer routine"
 			 * Set Control_mode to default
-			 * Reads persistence file 
 			 * Initialize VirtualGeyser;
-			 	* MOVED TO VIRTUAL GEYSER: Calculates time elapsed between fail-over and restart.
-			 	* MOVED TO VIRTUAL GEYSER: Fast-forwards virtual geyser up to current time.
 			 	* Wait for geyserReady
-			 	* 	start VirtualGeyserThread
+			 	* start VirtualGeyserThread
 		 */
+		
+		VirtualGeyser v_geyser = new VirtualGeyser();
+		
+		while(!v_geyser.geyserReady());
+		Thread virtualgeyser_thread = new Thread(v_geyser);
+		virtualgeyser_thread.start();
+		
 		
 		
 		/*	MAIN PROGRAM LOOP
@@ -82,6 +86,17 @@ public class GeyserSimulator {
 		 * 
 		 * LOOP
 		 */
+		
+		while(true){
+
+			System.out.println("Firmware measures T_internal as : " + v_geyser.getInternalTemp());
+
+			try {
+				Thread.sleep(2000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
 		
 	}
 	

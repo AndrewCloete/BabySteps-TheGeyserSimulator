@@ -19,12 +19,12 @@ import java.util.HashMap;
 public class VirtualGeyser implements Runnable {
 	
 	private static final String usage_filename = "/home/andrew/git/GeyserSimulator/GeyserSimulator/src/resources/usage.txt";
-	private static final String persistence_filename = "/home/andrew/git/GeyserSimulator/GeyserSimulator/src/resources/persist.txt";
+	private static final String persistence_filename = "/home/andrew/git/GeyserSimulator/GeyserSimulator/src/resources/persist.xml";
 	
-	private int internal_temp;
-	private int outlet_temp;
-	private int inlet_temp;
-	private int ambient_temp;
+	private float internal_temp;
+	private float outlet_temp;
+	private float inlet_temp;
+	private float ambient_temp;
 	
 	private boolean element_state;
 	
@@ -32,6 +32,7 @@ public class VirtualGeyser implements Runnable {
 	
 	private Map<Long, Integer> water_usage_map; //<Timestamp, UsageAmount>
 	
+	private boolean virtual_geyser_initialized; //Flag to inform simulator that VirtualGeyser is ready
 	
 	public VirtualGeyser(){
 		/*
@@ -44,12 +45,18 @@ public class VirtualGeyser implements Runnable {
 		 	* 		Fast-forwards virtual geyser up to current time.  
 		 */
 		
+		this.virtual_geyser_initialized = false;
+		
 		this.water_usage_map = getWaterUsageMap(usage_filename);
 		
-		if(this.setStateToLastPersistence(persistence_filename) == false)
+		if(this.setStateToLastPersistence(persistence_filename) == false){
 			this.internal_temp = 55;
 			this.ambient_temp = 25;
 			this.element_state = false;
+		}
+			
+		
+		this.virtual_geyser_initialized = true;
 	}
 	
 	/*
@@ -59,14 +66,14 @@ public class VirtualGeyser implements Runnable {
 	private void step(int water_usage_amount){
 		//Implement Philips' model here
 		
-		//Very basic model for testing of system
+		//Simplified model for testing of system
 		if(water_usage_amount <= 0)
-			this.internal_temp -= (this.internal_temp - this.ambient_temp)/250;	//Dissipation due to heat loss
+			this.internal_temp = this.internal_temp - (this.internal_temp - this.ambient_temp)/250;	//Heat loss due to dissipation 
 		else{
 			this.internal_temp -= 0.05*water_usage_amount; //Heat loss due to water leaving the system
 		}
 		
-		System.out.println("Debug: Step occured");
+		System.out.println("Virtual geyser time-step occured.");
 		
 	}
 	
@@ -85,15 +92,18 @@ public class VirtualGeyser implements Runnable {
 		 */
 		
 		//Hard coded for testing. Should be: current_time = "Date.currentTime.minutes()".
-		long current_time = 1418594253;	
-		
-		int water_usage_amount = this.water_usage_map.get(current_time);
-		this.step(water_usage_amount);
-		
-		try {
-			Thread.sleep(60000);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
+		while(true){
+			
+			try {
+				Thread.sleep(10000); //NB: Should be 60 seconds. (But thats too long for debugging)
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			
+			long current_time = 1418594253;	
+			
+			int water_usage_amount = this.water_usage_map.get(current_time);
+			this.step(water_usage_amount);
 		}
 	}
 	
@@ -114,6 +124,13 @@ public class VirtualGeyser implements Runnable {
 		return this.element_state;
 	}
 	
+	public float getInternalTemp(){
+		return this.internal_temp;
+	}
+	
+	public boolean geyserReady(){
+		return this.virtual_geyser_initialized;
+	}
 	
 	//--------------------- Utility methods -----------------------
 	//(no real world equivalents)
