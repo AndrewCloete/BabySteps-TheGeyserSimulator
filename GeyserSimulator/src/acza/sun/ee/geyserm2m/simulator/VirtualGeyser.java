@@ -29,35 +29,58 @@ public class VirtualGeyser implements Runnable {
 	private boolean element_state;
 	private boolean valve_state;
 	
-	private int t_delta; //Period step size must be constant? YES
+	private static final int t_delta = 60; //Period step size must be constant.
 	
 	private Map<Long, Integer> water_usage_map; //<Timestamp, UsageAmount>
 	
 	
 	public VirtualGeyser(){
 		/*
+		 * water_usage_map = getWaterUsageMap(usage_filename)
 		 * 
 		 * Check if persistence data is available
-		 	* NO - set state to default initial values
-		 	* YES - Calculates time elapsed between fail-over and restart
-		 	* 		Fast-forwards virtual geyser up to current time.
+		 	* NO - Set initial values to default values
+		 	* YES - Set initial values to last known persistence values
+		 	* 		Calculates time elapsed between fail-over and restart
+		 	* 		Fast-forwards virtual geyser up to current time.  
 		 */
 		
+	}
+	
+	/*
+	 * Calculates new geyser values using the current values, and a usage amount.
+	 * The calculation assumes a constant delta_time (period) and is independent of time.
+	 */
+	private void step(int water_usage_amount){
+		/*
+		 * Calculate
+		 */
 	}
 	
 	@Override
 	public void run() {
 		/* 
-		 * Must run exactly every minute
+		 * Step every minute: (The simulation period has to be exact since the usage event file is exact)
 		 * 
-		 * Calculate next step
-		 	* Check water usage for this minute, using current real-time.
+		 * Calculate geyser state for this step
+		 	* water_usage_amount = this.water_usage_map.get(current_time)
+		 	* step(water_usage_amount);
 		 * 
 		 * Persist state to file
 		 * 
 		 * Must include randomized failures.
 		 */
 		
+	}
+	
+	private void fastForward(long start_time, long end_time){
+		
+		/* PSEUDO
+		 * for(t = start_time, t <= end_time, t++){
+		 * 		water_usage_amount = this.water_usage_map.get(t);
+		 * 		this.step(usage);
+		 * }		
+		 */
 	}
 	
 	//---------------  ACCESS METHODS -----------------

@@ -74,7 +74,7 @@ public class GeyserSimulator {
 			 * 
 			 * 
 			 * API Command server:
-			 	* Check if new command is available in in-bound buffer.
+			 	* Check if new command is available in in-bound buffer (Check ack flag).
 			 	* Resets ack flag.
 			 	* Evaluates command integrity.
 			 	* Respond accordingly:
@@ -98,10 +98,6 @@ public class GeyserSimulator {
 		 * (NB: Keep this protocol INDEPENDENT. E.g. TCP is "permenently" connected i.e. false positive)
 		 * If time runs out --> control_mode = CLOSED and thread dies;
 		 *
-	 * Virtual geyser
-	 	* Wakes up every minute and steps.
-	 	* (The simulation period has to be exact since the usage event file is exact)
- 	 *
  	 *
 	 */
 	
