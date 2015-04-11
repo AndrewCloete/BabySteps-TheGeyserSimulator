@@ -46,7 +46,7 @@ public class GeyserSimulator {
 		/*
 		 * Initialize
 			 * Thread Listeners that checks bursts/power failures "Interrupt routine"
-			 * Initialize TCP handlers 
+			 * Initialize communications handlers 
 			 	* that captures data and packs it in the in-bound buffer
 			 	* transmits data present in the out-bound buffer.
 			 * Start api_timeout count down thread "Interrupt timer routine"
@@ -92,20 +92,21 @@ public class GeyserSimulator {
 	/* 
 	 * API timeout 
 		 * Thread starts when OPEN-LOOP CONTROL message is passed.
-		 * (Every time TCP activity occurs, api_timeout = API_TIMEOUT_RESET.)
+		 * (Every time API activity occurs, api_timeout = API_TIMEOUT_RESET.)
+		 * (NB: Keep this protocol INDEPENDENT. E.g. TCP is "permenently" connected i.e. false positive)
 		 * If time runs out --> control_mode = CLOSED and thread dies;
 		 * 
 	 */
 	
 	// --------------------------- LISTENERS --------------------------
 	 
-	/*
-	 * TCP reader and packer
+	/* 
+	 * API communications reader and packer
 	 	* Listens for in-bound packets and packs buffer
 	 	* Raises ack flag when new commend is received
 	 	* 
-	 * TCP writer
-	 	* Writes out-bound databuffer to TCP client
+	 * API communications writer
+	 	* Writes out-bound databuffer to client
 	 */
 	
 }

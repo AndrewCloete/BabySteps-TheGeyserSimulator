@@ -22,12 +22,14 @@ public class VirtualGeyser {
 	private boolean element_state;
 	private boolean valve_state;
 	
+	private int t_delta; //Period step size must be constant?
+	
 	
 	public VirtualGeyser(/* UsageEventFile.csv */){
 		//Reads file into memory
 	}
 	
-	public void step(int t_delta){
+	public void step(){
 		
 		// Must include randomized failures.
 	}
