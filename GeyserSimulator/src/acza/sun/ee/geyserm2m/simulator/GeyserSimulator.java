@@ -43,6 +43,10 @@ public class GeyserSimulator {
 	{
 		System.out.println("Baby steps");
 		
+		//Test file reformatting Util method.
+		String pulse_filename = "/home/andrew/git/GeyserSimulator/GeyserSimulator/src/resources/pulsefile.txt";
+		Utils.readPulseDataFromFile(pulse_filename);
+		
 		/*
 		 * Initialize
 			 * Thread Listeners that checks bursts/power failures "Interrupt routine"
@@ -52,9 +56,9 @@ public class GeyserSimulator {
 			 * Start api_timeout count down thread "Interrupt timer routine"
 			 * Set Control_mode to default
 			 * Reads persistence file 
-			 * Initialize VirtualGeyser(usage event file);
-			 	* Calculates time elapsed between fail-over and restart.
-			 	* Fast-forwards virtual geyser up to current time.
+			 * Initialize VirtualGeyser;
+			 	* MOVED TO VIRTUAL GEYSER: Calculates time elapsed between fail-over and restart.
+			 	* MOVED TO VIRTUAL GEYSER: Fast-forwards virtual geyser up to current time.
 		 */
 		
 		
@@ -66,8 +70,7 @@ public class GeyserSimulator {
 				 * OPEN:
 				 * 		- Switch element according to user suggestion 
 			 * 
-			 * Step virtual geyser.
-			 * Persist geyser data (later though) 
+			 * Step virtual geyser. 
 			 * 
 			 * 
 			 * API Command server:

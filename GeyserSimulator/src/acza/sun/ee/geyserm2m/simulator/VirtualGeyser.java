@@ -14,6 +14,9 @@ package acza.sun.ee.geyserm2m.simulator;
 
 public class VirtualGeyser {
 	
+	private static final String usage_filename = "/home/andrew/git/GeyserSimulator/GeyserSimulator/src/resources/usage.txt";
+	private static final String persistance_filename = "/home/andrew/git/GeyserSimulator/GeyserSimulator/src/resources/persist.txt";
+	
 	private int internal_temp;
 	private int outlet_temp;
 	private int inlet_temp;
@@ -25,11 +28,22 @@ public class VirtualGeyser {
 	private int t_delta; //Period step size must be constant?
 	
 	
-	public VirtualGeyser(/* UsageEventFile.csv */){
-		//Reads file into memory
+	public VirtualGeyser(){
+		/*
+		 * Reads usage event file into memory as MAP.
+		 * 
+		 * Check if persistence data is available
+		 	* NO - set state to default initial
+		 	* YES - calculate time difference 
+		 */
+		
 	}
 	
 	public void step(){
+		/*
+		 * Check for usage event.
+		 */
+		
 		
 		// Must include randomized failures.
 	}
