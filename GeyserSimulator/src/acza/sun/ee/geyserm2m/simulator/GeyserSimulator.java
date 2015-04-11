@@ -43,10 +43,6 @@ public class GeyserSimulator {
 	{
 		System.out.println("Baby steps");
 		
-		//Test file reformatting Util method.
-		String pulse_filename = "/home/andrew/git/GeyserSimulator/GeyserSimulator/src/resources/pulsefile.txt";
-		Utils.readPulseDataFromFile(pulse_filename);
-		
 		/*
 		 * Initialize
 			 * Thread Listeners that checks bursts/power failures "Interrupt routine"
@@ -95,7 +91,7 @@ public class GeyserSimulator {
 	 * API timeout 
 		 * Thread starts when OPEN-LOOP CONTROL message is passed.
 		 * (Every time API activity occurs, api_timeout = API_TIMEOUT_RESET.)
-		 * (NB: Keep this protocol INDEPENDENT. E.g. TCP is "permenently" connected i.e. false positive)
+		 * (NB: Keep this protocol INDEPENDENT. E.g. TCP is "permanently" connected i.e. false positive)
 		 * If time runs out --> control_mode = CLOSED and thread dies;
 		 *
  	 *
