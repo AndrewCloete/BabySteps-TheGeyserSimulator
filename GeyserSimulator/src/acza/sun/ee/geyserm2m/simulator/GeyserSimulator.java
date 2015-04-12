@@ -46,9 +46,7 @@ public class GeyserSimulator {
 		/*
 		 * Initialize
 			 * Thread Listeners that checks bursts/power failures "Interrupt routine"
-			 * Initialize communications handlers 
-			 	* that captures data and packs it in the in-bound buffer
-			 	* transmits data present in the out-bound buffer.
+			 * Initialize message queues (Command-queue and Reply-Queue)
 			 * Start api_timeout count down thread "Interrupt timer routine"
 			 * Set Control_mode to default
 			 * Initialize VirtualGeyser;
@@ -74,13 +72,12 @@ public class GeyserSimulator {
 			 * 
 			 * 
 			 * API Command server:
-			 	* Check if new command is available in in-bound buffer (Check ack flag).
-			 	* Resets ack flag.
+			 	* Check if new command is available in Command-queue.
 			 	* Evaluates command integrity.
 			 	* Respond accordingly:
 			 		* Set system parameters,
-			 		* or post reply data in out-bound buffer.
-			 		* 
+			 		* or post data in Reply-queue
+			 		* subtract one from time_to_live for control_mode.OPEN if appropriate.
 		 * 
 		 * sleep for about a second.
 		 * 
@@ -97,6 +94,7 @@ public class GeyserSimulator {
 			System.out.println("Element state: " + v_geyser.getElementState());
 			System.out.println();
 			
+			//Controller
 			switch(control_mode){
 				case CLOSED:{
 					
@@ -111,12 +109,14 @@ public class GeyserSimulator {
 				}
 				case OPEN:{
 					 // If geyser is in good health:
-						v_geyser.setElementState(element_request);
+					v_geyser.setElementState(element_request);
 
 					break;
 				}
 			}
 		
+			//API command server
+			
 
 			try {
 				Thread.sleep(2000);
@@ -128,27 +128,13 @@ public class GeyserSimulator {
 	}
 	
 	
-	
-	
-	
-	// ---------------------------- THREADS ---------------------------
-	
-	/* 
-	 * API timeout 
-		 * Thread starts when OPEN-LOOP CONTROL message is passed.
-		 * (Every time API activity occurs, api_timeout = API_TIMEOUT_RESET.)
-		 * (NB: Keep this protocol INDEPENDENT. E.g. TCP is "permanently" connected i.e. false positive)
-		 * If time runs out --> control_mode = CLOSED and thread dies;
-		 *
- 	 *
-	 */
-	
 	// --------------------------- LISTENERS --------------------------
 	 
 	/* 
-	 * API communications reader and packer
-	 	* Listens for in-bound packets and packs buffer
-	 	* Raises ack flag when new commend is received
+	 * API communications Command-queue reader and Reply-queue writer
+	 	* Listens for in-bound data and puts it in the Command-queue
+	 	* Writes any data in the Reply-queue to client.
+	 	* Normal Queue flags should be used to coordinate the process. e.g. isEmpty(), isFull() etc. 
 	 	* 
 	 */
 	
