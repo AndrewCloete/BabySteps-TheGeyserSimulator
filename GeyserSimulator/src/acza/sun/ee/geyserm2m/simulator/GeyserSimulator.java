@@ -22,13 +22,13 @@ public class GeyserSimulator {
 
 	//API Read-Write parameters
 	private enum Control_mode {CLOSED, OPEN}
-	Control_mode[] control_mode = Control_mode.values();
-	private boolean element_request = false;
+	private static Control_mode control_mode;
+	private static boolean element_request = false;
 	
 	
 	//Internal parameters
-	private static final int default_setpointHigh = 55;
-	private static final int default_setpointLow = 45;
+	private static final float default_setpointHigh = 55;
+	private static final float default_setpointLow = 45;
 	
 	private final int API_TIMEOUT_RESET = 100;
 	private int api_timeout;
@@ -87,9 +87,36 @@ public class GeyserSimulator {
 		 * LOOP
 		 */
 		
+		//Hard coded for testing
+		control_mode = Control_mode.CLOSED;
+		
 		while(true){
 
-			System.out.println("Firmware measures T_internal as : " + v_geyser.getInternalTemp());
+			System.out.println("Control mode: " + Control_mode.CLOSED);
+			System.out.println("T_internal: " + v_geyser.getInternalTemp());
+			System.out.println("Element state: " + v_geyser.getElementState());
+			System.out.println();
+			
+			switch(control_mode){
+				case CLOSED:{
+					
+					if(v_geyser.getInternalTemp() <= default_setpointLow){
+						v_geyser.setElementState(true);
+					}
+					else if(v_geyser.getInternalTemp() >= default_setpointHigh){
+						v_geyser.setElementState(false);
+					}
+					
+					break;
+				}
+				case OPEN:{
+					 // If geyser is in good health:
+						v_geyser.setElementState(element_request);
+
+					break;
+				}
+			}
+		
 
 			try {
 				Thread.sleep(2000);
@@ -99,6 +126,10 @@ public class GeyserSimulator {
 		}
 		
 	}
+	
+	
+	
+	
 	
 	// ---------------------------- THREADS ---------------------------
 	
@@ -119,8 +150,6 @@ public class GeyserSimulator {
 	 	* Listens for in-bound packets and packs buffer
 	 	* Raises ack flag when new commend is received
 	 	* 
-	 * API communications writer
-	 	* Writes out-bound databuffer to client
 	 */
 	
 }
