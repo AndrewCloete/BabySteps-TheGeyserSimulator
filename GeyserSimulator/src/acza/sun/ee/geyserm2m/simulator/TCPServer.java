@@ -40,15 +40,35 @@ public class TCPServer implements Runnable {
 	@Override
 	public void run() {
 		try {
+			
+			/* Server loop: forever
+			 	* Wait for client to connect to port. (Blocking)
+			 	* Get input and output stream references
+			 	* 
+			 	* Conversation loop: while client is connected
+			 		* Read a line from client
+			 		* Check if client has disconnected (line == null);
+			 		* Push line on inbound_queue
+			 		* Wait for content on outbound_queue
+			 		* Pop content off outbound_queue
+			 		* Write content to client
+			 * 
+			 */
+			
 			while(true){	//To-do: add thread flag to ensure graceful shutdown
-				Socket client = listener.accept(); //Blocking
+				Socket client = listener.accept(); 
 				
 				InputStream in = client.getInputStream();
 				OutputStream out = client.getOutputStream();
 				
-				while(client.isConnected()){
+				while(client.isConnected()){	
 					BufferedReader bin = new BufferedReader(new InputStreamReader(in));
-					inbound_queue.push(bin.readLine());
+					String buffer = bin.readLine();
+					
+					if(buffer == null) 	//Check of client disconnected.
+						break;	 		//Break out of conversation loop
+					
+					inbound_queue.push(buffer);
 					
 					while(outbound_queue.isEmpty()){ //Wait for controller to respond;
 						try {
@@ -61,12 +81,13 @@ public class TCPServer implements Runnable {
 					PrintWriter pout = new PrintWriter(out, true);
 					pout.println(outbound_queue.pop());
 				}	
+				
+				System.out.println("Client disconnected");
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
 			System.out.println("Error in TCP converstation loop.");
 		}
-
 	}
 
 	@Override
@@ -74,8 +95,6 @@ public class TCPServer implements Runnable {
 		super.finalize();
 		this.listener.close();
 	}
-	
-	
 
 }
 

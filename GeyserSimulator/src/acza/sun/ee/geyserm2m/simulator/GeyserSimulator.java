@@ -16,6 +16,7 @@
 package acza.sun.ee.geyserm2m.simulator;
 
 import java.util.LinkedList;
+import org.json.simple.JSONObject;
 
 public class GeyserSimulator {
 	
@@ -29,13 +30,15 @@ public class GeyserSimulator {
 	
 	
 	//Internal parameters
-	private static final float default_setpointHigh = 55;
+	private static final float default_setpointHigh = 50;
 	private static final float default_setpointLow = 45;
 	
 	private static LinkedList<String> commandQueue = new LinkedList<String>();
 	private static LinkedList<String> replyQueue = new LinkedList<String>();
 	
 	private static int PORT = 3000;
+	
+	private static int open_ttl = 0;
 	
 	/*
 	 * Represents the main entry point of firmware.
@@ -66,6 +69,7 @@ public class GeyserSimulator {
 		virtualgeyser_thread.start();
 		System.out.println("Virtual Geyser started.\n");
 		
+		control_mode = Control_mode.CLOSED; //Initialize default control mode
 		
 		/* MAIN PROGRAM LOOP:
 			 * Control routine:	Lowest level hardware controller
@@ -75,13 +79,10 @@ public class GeyserSimulator {
 			 * LOOP forever
 		 */
 		
-		//Hard coded for testing
-		control_mode = Control_mode.CLOSED;
-		
 		while(true){
 
 			//Debug messages
-			System.out.println("Control mode: " + Control_mode.CLOSED);
+			System.out.println("Control mode: " + control_mode);
 			System.out.println("T_internal: " + v_geyser.getInternalTemp());
 			System.out.println("Element state: " + v_geyser.getElementState());
 			System.out.println();
@@ -111,6 +112,10 @@ public class GeyserSimulator {
 				case OPEN:{
 					 // If geyser is in good health:
 					v_geyser.setElementState(element_request);
+					
+					open_ttl -= 1;		//Decrement open-loop control time-to-live
+					if(open_ttl <= 0)	//If ttl runs out, switch back to closed-loop control
+						control_mode = Control_mode.CLOSED;
 
 					break;
 				}
@@ -121,20 +126,60 @@ public class GeyserSimulator {
 			/*
 			 * API command service:
 			 	* Check if new command is available in Command-queue.
-			 	* Evaluates command integrity.
 			 	* Respond accordingly:
+			 		* Evaluate command integrity. 
 			 		* Change system parameters,
 			 		* or post data in Reply-queue.
-			 		* Subtract one from time_to_live for control_mode.OPEN if appropriate.
 			 	BUSINESS RULE: Each command must result in a reply. Even if it is just 'Ack'.
 			 */
 
 			if(!commandQueue.isEmpty()){
-				String command = commandQueue.pop(); //Pop new command off queue
+				String command = commandQueue.pop(); 		//Pop new command off queue
+				String response = "Err: Invalid command";	//Default response;
 				
-				replyQueue.push("Command ack: " + command); //Echo command back to user
+				//Simple command handler
+				if(command.equals("open")){
+					open_ttl = 5;							//Reset time-to-live
+					control_mode = Control_mode.OPEN;
+					response = "Ack: Switching to open-loop control mode";
+				}
+				else if(command.equals("elementon")){
+					if(control_mode == Control_mode.OPEN){
+						open_ttl = 5;
+						element_request = true;
+						response = "Ack: Element on requested.";
+					}
+					else{
+						response = "Err: System under closed-loop control.";
+					}
+				}
+				else if(command.equals("elementoff")){
+					if(control_mode == Control_mode.OPEN){
+						open_ttl = 5;
+						element_request = false;
+						response = "Ack: Element off requested.";
+					}
+					else{
+						response = "Err: System under closed-loop control.";
+					}
+				}
+				else if(command.equals("get")){
+					JSONObject geyserdata = new JSONObject();
+					
+					geyserdata.put("InternalTemp", v_geyser.getInternalTemp());
+					geyserdata.put("ElementState", v_geyser.getElementState());
+					geyserdata.put("ControlMode", control_mode.toString());
+					response = geyserdata.toString();
+					
+				}
 				
-				System.out.println("Command handled.");
+				replyQueue.push(response);
+				
+				/*
+				 * To-do: Command handler
+				 	* Create as separate private method
+				 	* Use enum object for command verifcation and swithcing 
+				 */
 			}
 			
 			
@@ -162,12 +207,10 @@ public class GeyserSimulator {
  		* 
  		* TCP server thread:
  			* Listens for client. (SINGULAR, meaning firmware is monogamous)
- 			* Reads packets into temporary buffer until '\n' is reached
+ 			* Reads a line from client.
  			* Puts content of buffer in CommandQueue
-		*
-		* TCP client-proxy thread:
-			* Waits for content on the ReplyQueue
-			* Writes data out to client.
+ 			* Waits for content on the ReplyQueue
+ 			* Writes data out to client.
 	 */
 	
 }
