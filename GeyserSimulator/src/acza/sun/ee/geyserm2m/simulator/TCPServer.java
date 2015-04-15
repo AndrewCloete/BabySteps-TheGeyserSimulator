@@ -3,7 +3,9 @@
  * AUTHOR:	Cloete A.H
  * PROJECT:	M-Eng, Inteligent geyser M2M system.	
  * ---------------------------------------------------------------------------------------------------------
- * DESCRIPTION: Runs a TCP listerner thread
+ * DESCRIPTION: Abstracts TCP socket communications to message queues. Server side implementation.
+ * 			
+ * 			Runs a TCP listerner thread
  * 				- pushes received strings to a given inbound_queue LinkedList<String>
  * 				- waits for content on outbound_queue, and then writes it out.
  * ---------------------------------------------------------------------------------------------------------

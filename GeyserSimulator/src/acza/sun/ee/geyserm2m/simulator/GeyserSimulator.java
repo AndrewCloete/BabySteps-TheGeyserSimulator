@@ -38,7 +38,10 @@ public class GeyserSimulator {
 	
 	private static int PORT = 3000;
 	
+	private static final int CONTROL_PERIOD = 1; //In seconds
+	
 	private static int open_ttl = 0;
+	private static final int TTL_RESET = 60; //Time to live is TTL_RESET * CONTROL_PERIOD seconds
 	
 	/*
 	 * Represents the main entry point of firmware.
@@ -139,13 +142,13 @@ public class GeyserSimulator {
 				
 				//Simple command handler
 				if(command.equals("open")){
-					open_ttl = 5;							//Reset time-to-live
+					open_ttl = TTL_RESET;							//Reset time-to-live
 					control_mode = Control_mode.OPEN;
 					response = "Ack: Switching to open-loop control mode";
 				}
 				else if(command.equals("elementon")){
 					if(control_mode == Control_mode.OPEN){
-						open_ttl = 5;
+						open_ttl = TTL_RESET;
 						element_request = true;
 						response = "Ack: Element on requested.";
 					}
@@ -155,7 +158,7 @@ public class GeyserSimulator {
 				}
 				else if(command.equals("elementoff")){
 					if(control_mode == Control_mode.OPEN){
-						open_ttl = 5;
+						open_ttl = TTL_RESET;
 						element_request = false;
 						response = "Ack: Element off requested.";
 					}
@@ -176,17 +179,19 @@ public class GeyserSimulator {
 				replyQueue.push(response);
 				
 				/*
-				 * To-do: Command handler
+				 * TODO: Command handler
+				 	* Design a better more robust protocol (This is after all one of the main points of your research)
 				 	* Create as separate private method
-				 	* Use enum object for command verifcation and swithcing 
+				 	* Use enum object for command verification and switching 
 				 */
 			}
 			
 			
 			/* -----------------------------------------------------------------------------*/
-
+			
+			//Firmware period is controlled here.  
 			try {
-				Thread.sleep(2000);
+				Thread.sleep(CONTROL_PERIOD*1000);	
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
