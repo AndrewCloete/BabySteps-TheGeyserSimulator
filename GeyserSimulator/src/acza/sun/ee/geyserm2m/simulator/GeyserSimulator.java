@@ -173,6 +173,7 @@ public class GeyserSimulator {
 					geyserdata.put("ElementState", v_geyser.getElementState());
 					geyserdata.put("ControlMode", control_mode.toString());
 					response = geyserdata.toString();
+					System.out.println(response);
 					
 				}
 				
