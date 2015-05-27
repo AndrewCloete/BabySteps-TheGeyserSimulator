@@ -15,8 +15,14 @@
 
 package acza.sun.ee.geyserm2m.simulator;
 
-import java.util.LinkedList;
+
+import java.net.SocketException;
+import java.net.UnknownHostException;
+
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 
 public class GeyserSimulator {
 	
@@ -24,21 +30,21 @@ public class GeyserSimulator {
 	private char critical_flags = 0;
 
 	//API Read-Write parameters
-	private enum Control_mode {CLOSED, OPEN}
-	private static Control_mode control_mode;
-	private static boolean element_request = false;
+	private enum ControlMode {CLOSED, OPEN}
+	private static ControlMode control_mode;
+	private enum ElementRequest {ON, OFF, UNKNOWN, AUTO};
+	private static ElementRequest element_request = ElementRequest.UNKNOWN;
 	
 	
 	//Internal parameters
 	private static final float default_setpointHigh = 50;
 	private static final float default_setpointLow = 45;
 	
-	private static LinkedList<String> commandQueue = new LinkedList<String>();
-	private static LinkedList<String> replyQueue = new LinkedList<String>();
+	private static UDPclient udp_client;
+	private static long GEYSER_ID = 1236;
 	
-	private static int PORT = 3000;
 	
-	private static final int CONTROL_PERIOD = 1; //In seconds
+	private static final int CONTROL_PERIOD = 5; //In seconds
 	
 	private static int open_ttl = 0;
 	private static final int TTL_RESET = 60; //Time to live is TTL_RESET * CONTROL_PERIOD seconds
@@ -47,24 +53,26 @@ public class GeyserSimulator {
 	 * Represents the main entry point of firmware.
 	 */
 	public static void main(String [] args)
-	{
-		System.out.println("Project: Baby steps.\n");
+	{	
+		try{
+			udp_client = new UDPclient("localhost", 3636, 1024);
+		} catch (UnknownHostException e){
+			System.out.println("Invalid IP address.");
+			return;
+		} catch (SocketException e){
+			System.out.println("Unable to create socket.");
+			return;
+		}
+		
 		
 		/*
-		 * Initialize
-			 * Thread Listeners that checks bursts/power failures "Interrupt routine"
-			 * Register message queues (Command-queue and Reply-Queue) with appropriate user facing handler(s)
-			 * Initialize VirtualGeyser;
+		 * Initialise
+			 * Initialise VirtualGeyser;
 			 	* Wait for geyserReady
 			 	* start VirtualGeyserThread
 			 * Set Control_mode to default 
 		 */
-		System.out.println("Starting TCP server...");
-		TCPServer tcp_server = new TCPServer(PORT, commandQueue, replyQueue);
-		Thread tcp_server_thread = new Thread(tcp_server);
-		tcp_server_thread.start();
-		System.out.println("TCP server started.\n");
-		
+
 		System.out.println("Starting Virtual Geyser...");
 		VirtualGeyser v_geyser = new VirtualGeyser();
 		while(!v_geyser.geyserReady());
@@ -72,7 +80,7 @@ public class GeyserSimulator {
 		virtualgeyser_thread.start();
 		System.out.println("Virtual Geyser started.\n");
 		
-		control_mode = Control_mode.CLOSED; //Initialize default control mode
+		control_mode = ControlMode.CLOSED; //Initialize default control mode
 		
 		/* MAIN PROGRAM LOOP:
 			 * Control routine:	Lowest level hardware controller
@@ -84,10 +92,15 @@ public class GeyserSimulator {
 		
 		while(true){
 
+			//Take measurements
+			float internal_temp = v_geyser.getInternalTemp();
+			boolean elemet_state = v_geyser.getElementState();
+			
+			
 			//Debug messages
 			System.out.println("Control mode: " + control_mode);
-			System.out.println("T_internal: " + v_geyser.getInternalTemp());
-			System.out.println("Element state: " + v_geyser.getElementState());
+			System.out.println("T_internal: " + internal_temp);
+			System.out.println("Element state: " + elemet_state);
 			System.out.println();
 			
 			/* -----------------------------------------------------------------------------*/
@@ -101,92 +114,70 @@ public class GeyserSimulator {
 			 * 
 			 */
 			switch(control_mode){
-				case CLOSED:{
-					
-					if(v_geyser.getInternalTemp() <= default_setpointLow){
-						v_geyser.setElementState(true);
-					}
-					else if(v_geyser.getInternalTemp() >= default_setpointHigh){
-						v_geyser.setElementState(false);
-					}
-					
-					break;
-				}
-				case OPEN:{
-					 // If geyser is in good health:
-					v_geyser.setElementState(element_request);
-					
-					open_ttl -= 1;		//Decrement open-loop control time-to-live
-					if(open_ttl <= 0)	//If ttl runs out, switch back to closed-loop control
-						control_mode = Control_mode.CLOSED;
+			case CLOSED:{
 
+				if(internal_temp <= default_setpointLow){
+					v_geyser.setElementState(true);
+				}
+				else if(internal_temp >= default_setpointHigh){
+					v_geyser.setElementState(false);
+				}
+
+				break;
+			}
+			case OPEN:{
+				// If geyser is in good health:
+				switch(element_request){
+				case ON:{
+					v_geyser.setElementState(true);
 					break;
 				}
+
+				case OFF:{
+					v_geyser.setElementState(false);
+					break;
+				}
+				default:
+					break;
+				}
+
+				open_ttl -= 1;		//Decrement open-loop control time-to-live
+				if(open_ttl <= 0)	//If ttl runs out, switch back to closed-loop control
+					control_mode = ControlMode.CLOSED;
+
+				break;
+			}
 			}
 		
 			/* -----------------------------------------------------------------------------*/
 			
-			/*
-			 * API command service:
-			 	* Check if new command is available in Command-queue.
-			 	* Respond accordingly:
-			 		* Evaluate command integrity. 
-			 		* Change system parameters,
-			 		* or post data in Reply-queue.
-			 	BUSINESS RULE: Each command must result in a reply. Even if it is just 'Ack'.
-			 */
-
-			if(!commandQueue.isEmpty()){
-				String command = commandQueue.pop(); 		//Pop new command off queue
-				String response = "Err: Invalid command";	//Default response;
-				
-				//Simple command handler
-				if(command.equals("open")){
-					open_ttl = TTL_RESET;							//Reset time-to-live
-					control_mode = Control_mode.OPEN;
-					response = "Ack: Switching to open-loop control mode";
-				}
-				else if(command.equals("elementon")){
-					if(control_mode == Control_mode.OPEN){
-						open_ttl = TTL_RESET;
-						element_request = true;
-						response = "Ack: Element on requested.";
-					}
-					else{
-						response = "Err: System under closed-loop control.";
-					}
-				}
-				else if(command.equals("elementoff")){
-					if(control_mode == Control_mode.OPEN){
-						open_ttl = TTL_RESET;
-						element_request = false;
-						response = "Ack: Element off requested.";
-					}
-					else{
-						response = "Err: System under closed-loop control.";
-					}
-				}
-				else if(command.equals("get")){
-					JSONObject geyserdata = new JSONObject();
-					
-					geyserdata.put("InternalTemp", v_geyser.getInternalTemp());
-					geyserdata.put("ElementState", v_geyser.getElementState());
-					geyserdata.put("ControlMode", control_mode.toString());
-					response = geyserdata.toString();
-					System.out.println(response);
-					
-				}
-				
-				replyQueue.push(response);
-				
-				/*
-				 * TODO: Command handler
-				 	* Design a better more robust protocol (This is after all one of the main points of your research)
-				 	* Create as separate private method
-				 	* Use enum object for command verification and switching 
-				 */
-			}
+			//Send system info and measurements, and receive new control data.
+			String msg = "{\"id\":"+ GEYSER_ID + ", \"t1\":"+ internal_temp +", \"e\":\""+ elemet_state +"\"}";
+			System.out.println("To server: " + msg);
 			
+			String recieve = udp_client.sendPacket(msg);
+			System.out.println("From server: " + recieve);
+			
+			//Parse 
+			String new_element_state = (String)getValueFromJSON("e", recieve.trim());
+			if(new_element_state.equalsIgnoreCase("ON")){	
+				element_request = ElementRequest.ON;
+				control_mode = ControlMode.OPEN;
+				open_ttl = TTL_RESET;
+			}
+			else if(new_element_state.equalsIgnoreCase("OFF")) {
+				element_request = ElementRequest.OFF;
+				control_mode = ControlMode.OPEN;
+				open_ttl = TTL_RESET;
+			}
+			else if(new_element_state.equalsIgnoreCase("AUTO")){
+				element_request = ElementRequest.AUTO;
+				control_mode = ControlMode.CLOSED;
+			}
+			else{
+				element_request = ElementRequest.UNKNOWN;
+				control_mode = ControlMode.CLOSED;
+			}
 			
 			/* -----------------------------------------------------------------------------*/
 			
@@ -201,24 +192,25 @@ public class GeyserSimulator {
 	}
 	
 	
-	// --------------------------- LISTENERS --------------------------
-	 
-	/* 
-	 * API communications Command-queue reader and Reply-queue writer
-	 	* Listens for in-bound data and puts it in the Command-queue
-	 	* Writes any data in the Reply-queue to client.
-	 	* Normal Queue flags should be used to coordinate the process. e.g. isEmpty(), isFull() etc. 
-	 	* This is the only part that is protocol dependent. 
- 		*
- 		* 
- 		* TCP server thread:
- 			* Listens for client. (SINGULAR, meaning firmware is monogamous)
- 			* Reads a line from client.
- 			* Puts content of buffer in CommandQueue
- 			* Waits for content on the ReplyQueue
- 			* Writes data out to client.
-	 */
 	
+	private static Object getValueFromJSON(String key, String JSON){
+
+		JSONParser parser=new JSONParser();
+		try{
+			Object obj = parser.parse(JSON);
+			JSONArray array = new JSONArray();
+			array.add(obj);	
+			JSONObject jobj = (JSONObject)array.get(0);
+
+			return jobj.get(key);
+
+		}catch(ParseException pe){
+			System.err.println("JSON parse exeption at position: " + pe.getPosition() + " : " + pe);
+			return "Error";
+		}
+	}
+	
+
 }
 
 
