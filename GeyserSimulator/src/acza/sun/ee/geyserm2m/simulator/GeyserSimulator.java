@@ -41,7 +41,7 @@ public class GeyserSimulator {
 	private static final float default_setpointLow = 45;
 	
 	private static UDPclient udp_client;
-	private static long GEYSER_ID = 1236;
+	private static long GEYSER_ID;
 	
 	
 	private static final int CONTROL_PERIOD = 5; //In seconds
@@ -54,8 +54,24 @@ public class GeyserSimulator {
 	 */
 	public static void main(String [] args)
 	{	
+		
+		// ---------------------- Sanity checking of command line arguments -------------------------------------------
+		if( args.length != 3 )
+		{
+			System.out.println( "Usage: <NSCL IP address>  <UDPServer port>  <NIP ID>" ) ;
+			return;
+		}
+
+		final int UDP_PORT;
 		try{
-			udp_client = new UDPclient("localhost", 3636, 1024);
+			UDP_PORT = Integer.parseInt( args[1] ); // Convert the argument to ensure that is it valid
+		}catch (NumberFormatException e){
+			System.out.println( "UDP port invalid." ) ;
+			return;
+		}
+		
+		try{
+			udp_client = new UDPclient(args[0], UDP_PORT, 1024);
 		} catch (UnknownHostException e){
 			System.out.println("Invalid IP address.");
 			return;
@@ -63,6 +79,16 @@ public class GeyserSimulator {
 			System.out.println("Unable to create socket.");
 			return;
 		}
+		
+		
+		try{
+			GEYSER_ID = new Long(args[2]);
+		} catch (NumberFormatException e){
+			System.out.println( "Geyser ID invalid." ) ;
+			return;
+		}
+
+		//---------------------------------------------------------------------------------------------------------------
 		
 		
 		/*
@@ -160,23 +186,25 @@ public class GeyserSimulator {
 			
 			//Parse 
 			String new_element_state = (String)getValueFromJSON("e", recieve.trim());
-			if(new_element_state.equalsIgnoreCase("ON")){	
-				element_request = ElementRequest.ON;
-				control_mode = ControlMode.OPEN;
-				open_ttl = TTL_RESET;
-			}
-			else if(new_element_state.equalsIgnoreCase("OFF")) {
-				element_request = ElementRequest.OFF;
-				control_mode = ControlMode.OPEN;
-				open_ttl = TTL_RESET;
-			}
-			else if(new_element_state.equalsIgnoreCase("AUTO")){
-				element_request = ElementRequest.AUTO;
-				control_mode = ControlMode.CLOSED;
-			}
-			else{
-				element_request = ElementRequest.UNKNOWN;
-				control_mode = ControlMode.CLOSED;
+			if(new_element_state != null){
+				if(new_element_state.equalsIgnoreCase("ON")){	
+					element_request = ElementRequest.ON;
+					control_mode = ControlMode.OPEN;
+					open_ttl = TTL_RESET;
+				}
+				else if(new_element_state.equalsIgnoreCase("OFF")) {
+					element_request = ElementRequest.OFF;
+					control_mode = ControlMode.OPEN;
+					open_ttl = TTL_RESET;
+				}
+				else if(new_element_state.equalsIgnoreCase("AUTO")){
+					element_request = ElementRequest.AUTO;
+					control_mode = ControlMode.CLOSED;
+				}
+				else{
+					element_request = ElementRequest.UNKNOWN;
+					control_mode = ControlMode.CLOSED;
+				}
 			}
 			
 			/* -----------------------------------------------------------------------------*/
