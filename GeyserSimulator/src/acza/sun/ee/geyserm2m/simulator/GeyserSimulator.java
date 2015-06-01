@@ -17,12 +17,17 @@ package acza.sun.ee.geyserm2m.simulator;
 
 
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+
+import java.util.Iterator;
+import java.util.Set;
+import java.util.HashSet;
 
 public class GeyserSimulator {
 	
@@ -181,31 +186,40 @@ public class GeyserSimulator {
 			String msg = "{\"id\":"+ GEYSER_ID + ", \"t1\":"+ internal_temp +", \"e\":\""+ elemet_state +"\"}";
 			System.out.println("To server: " + msg);
 			
-			String recieve = udp_client.sendPacket(msg);
-			System.out.println("From server: " + recieve);
+			try{
+				//Receive message
+				String recieve = udp_client.sendPacket(msg).trim();
+				System.out.println("From server: " + recieve);
+				
+				//Parse message and execute commands
+				String recieve_status = (String)getValueFromJSON("status", recieve);
+				System.out.println("Status: " + recieve_status);
+				
+				if(recieve_status.equalsIgnoreCase("ACK")){
+					open_ttl = TTL_RESET;
+					Set<String> recieved_keys = getKeysFromJSON(recieve.trim());
+					
+					Iterator<String> iter = recieved_keys.iterator();
+					while (iter.hasNext()) {
+						String key = iter.next();
+					    System.out.println("Processing key: " + key);
+					    
+					    switch(key){
+					    case "e":{
+					    	elementCommand((String)getValueFromJSON("e", recieve));
+					    	break;
+					    }
+					    default:
+					    	break;
+					    }
+					}
+				}
 			
-			//Parse 
-			String new_element_state = (String)getValueFromJSON("e", recieve.trim());
-			if(new_element_state != null){
-				if(new_element_state.equalsIgnoreCase("ON")){	
-					element_request = ElementRequest.ON;
-					control_mode = ControlMode.OPEN;
-					open_ttl = TTL_RESET;
-				}
-				else if(new_element_state.equalsIgnoreCase("OFF")) {
-					element_request = ElementRequest.OFF;
-					control_mode = ControlMode.OPEN;
-					open_ttl = TTL_RESET;
-				}
-				else if(new_element_state.equalsIgnoreCase("AUTO")){
-					element_request = ElementRequest.AUTO;
-					control_mode = ControlMode.CLOSED;
-				}
-				else{
-					element_request = ElementRequest.UNKNOWN;
-					control_mode = ControlMode.CLOSED;
-				}
+				
+			} catch(Exception e){
+				System.out.println("Socekt timed out, or inbound message was corrupt.");
 			}
+			
 			
 			/* -----------------------------------------------------------------------------*/
 			
@@ -233,12 +247,49 @@ public class GeyserSimulator {
 			return jobj.get(key);
 
 		}catch(ParseException pe){
-			System.err.println("JSON parse exeption at position: " + pe.getPosition() + " : " + pe);
+			System.err.println("JSON1 parse exeption at position: " + pe.getPosition() + " : " + pe);
 			return "Error";
 		}
 	}
 	
+	private static Set<String> getKeysFromJSON(String JSON){
 
+		JSONParser parser=new JSONParser();
+		try{
+			Object obj = parser.parse(JSON);
+			JSONArray array = new JSONArray();
+			array.add(obj);	
+			JSONObject jobj = (JSONObject)array.get(0);
+					
+			return jobj.keySet();
+
+		}catch(ParseException pe){
+			System.err.println("JSON2 parse exeption at position: " + pe.getPosition() + " : " + pe);
+			return new HashSet<String>();
+		}
+	}
+	
+
+	private static void elementCommand(String new_element_state){
+		if(new_element_state.equalsIgnoreCase("ON")){	
+			element_request = ElementRequest.ON;
+			control_mode = ControlMode.OPEN;
+		}
+		else if(new_element_state.equalsIgnoreCase("OFF")) {
+			element_request = ElementRequest.OFF;
+			control_mode = ControlMode.OPEN;
+		}
+		else if(new_element_state.equalsIgnoreCase("AUTO")){
+			element_request = ElementRequest.AUTO;
+			control_mode = ControlMode.CLOSED;
+		}
+		else{
+			element_request = ElementRequest.UNKNOWN;
+			control_mode = ControlMode.CLOSED;
+		}
+	}
+	
+	
 }
 
 
