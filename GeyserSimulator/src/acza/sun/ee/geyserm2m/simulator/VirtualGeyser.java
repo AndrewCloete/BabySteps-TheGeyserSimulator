@@ -50,7 +50,7 @@ public class VirtualGeyser implements Runnable {
 		this.water_usage_map = getWaterUsageMap(usage_filename);
 		
 		if(this.setStateToLastPersistence(persistence_filename) == false){
-			this.internal_temp = (float)45.5;
+			this.internal_temp = (float)42;
 			this.ambient_temp = 25;
 			this.element_state = false;
 		}
@@ -74,10 +74,10 @@ public class VirtualGeyser implements Runnable {
 		}
 		
 		if(this.element_state == true){
-			this.internal_temp += 0.5;	//Heat gained due to element being on
+			this.internal_temp += 0.2;	//Heat gained due to element being on
 		}
 		
-		System.out.println("Virtual geyser time-step occured.");
+		System.out.println("Virtual geyser time-step occured. Elementstate: " + this.element_state);
 		
 	}
 	

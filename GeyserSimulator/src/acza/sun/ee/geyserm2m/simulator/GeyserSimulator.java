@@ -42,17 +42,17 @@ public class GeyserSimulator {
 	
 	
 	//Internal parameters
-	private static final float default_setpointHigh = 50;
-	private static final float default_setpointLow = 45;
+	private static final float default_setpointHigh = 45;
+	private static final float default_setpointLow = 40;
 	
 	private static UDPclient udp_client;
 	private static long GEYSER_ID;
 	
 	
-	private static final int CONTROL_PERIOD = 5; //In seconds
+	private static final int CONTROL_PERIOD = 60; //In seconds
 	
 	private static int open_ttl = 0;
-	private static final int TTL_RESET = 60; //Time to live is TTL_RESET * CONTROL_PERIOD seconds
+	private static final int TTL_RESET = 120; //Time to live is TTL_RESET * CONTROL_PERIOD seconds
 	
 	/*
 	 * Represents the main entry point of firmware.
@@ -128,62 +128,29 @@ public class GeyserSimulator {
 			boolean elemet_state = v_geyser.getElementState();
 			
 			
-			//Debug messages
-			System.out.println("Control mode: " + control_mode);
-			System.out.println("T_internal: " + internal_temp);
-			System.out.println("Element state: " + elemet_state);
-			System.out.println();
+			String rstate = "OFF";
+			if (elemet_state)
+				rstate = "ON";
 			
-			/* -----------------------------------------------------------------------------*/
-			
-			/*
-			 * Control routine: 
-				 * CLOSED:
-				 * 		- Switch element according to internal temperature, between default dead-bands.
-				 * OPEN:
-				 * 		- Switch element according to user suggestion 
-			 * 
-			 */
-			switch(control_mode){
-			case CLOSED:{
-
-				if(internal_temp <= default_setpointLow){
-					v_geyser.setElementState(true);
-				}
-				else if(internal_temp >= default_setpointHigh){
-					v_geyser.setElementState(false);
-				}
-
-				break;
-			}
-			case OPEN:{
-				// If geyser is in good health:
-				switch(element_request){
-				case ON:{
-					v_geyser.setElementState(true);
-					break;
-				}
-
-				case OFF:{
-					v_geyser.setElementState(false);
-					break;
-				}
-				default:
-					break;
-				}
-
-				open_ttl -= 1;		//Decrement open-loop control time-to-live
-				if(open_ttl <= 0)	//If ttl runs out, switch back to closed-loop control
-					control_mode = ControlMode.CLOSED;
-
-				break;
-			}
-			}
-		
-			/* -----------------------------------------------------------------------------*/
-			
-			//Send system info and measurements, and receive new control data.
-			String msg = "{\"id\":"+ GEYSER_ID + ", \"t1\":"+ internal_temp +", \"e\":\""+ elemet_state +"\"}";
+			//Send system info and measurements, and receive new control data. //+ "\"AA\":"
+			String msg = "{"
+					+ "\"Ver\":" + 0001
+					+ ", \"ID\":"+ GEYSER_ID 
+					+ ", \"Tstamp\":" + System.currentTimeMillis()/1000L
+					+ ", \"Rstate\":" + "\"" + rstate + "\""
+					+ ", \"Vstate\":" + "\"OPEN\""
+					+ ", \"Gstate\":" + "\"OK\""
+					+ ", \"T1\":"+ (int)internal_temp 
+					+ ", \"T2\":"+ (int)(internal_temp*internal_temp/100)
+					+ ", \"T3\":"+ (int)(internal_temp*internal_temp/200)
+					+ ", \"T4\":"+ 25
+					+ ", \"KW\":"+ 3333 
+					+ ", \"KWH\":"+ 0
+					+ ", \"HLmin\":"+ 0 
+					+ ", \"HLtotal\":"+ 0 
+					+ ", \"CLmin\":"+ 0 
+					+ ", \"CLtotal\":"+ 0 
+					+"}";
 			System.out.println("To server: " + msg);
 			
 			try{
@@ -205,8 +172,8 @@ public class GeyserSimulator {
 					    System.out.println("Processing key: " + key);
 					    
 					    switch(key){
-					    case "e":{
-					    	elementCommand((String)getValueFromJSON("e", recieve));
+					    case "Rstate":{
+					    	elementCommand((String)getValueFromJSON("Rstate", recieve));
 					    	break;
 					    }
 					    default:
@@ -214,8 +181,62 @@ public class GeyserSimulator {
 					    }
 					}
 				}
-			
 				
+				
+				//Debug messages
+				System.out.println("Control mode: " + control_mode);
+				
+				
+				
+				/* ---------------------------------- Control -------------------------------------------*/
+
+				/*
+				 * Control routine: 
+				 	* CLOSED:
+				 	* 		- Switch element according to internal temperature, between default dead-bands.
+				 	* OPEN:
+				 	* 		- Switch element according to user suggestion 
+				 * 
+				 */
+				switch(control_mode){
+				case CLOSED:{
+
+					if(internal_temp <= default_setpointLow){
+						v_geyser.setElementState(true);
+					}
+					else if(internal_temp >= default_setpointHigh){
+						v_geyser.setElementState(false);
+					}
+
+					break;
+				}
+				case OPEN:{
+					// If geyser is in good health:
+					switch(element_request){
+					case ON:{
+						v_geyser.setElementState(true);
+						break;
+					}
+
+					case OFF:{
+						v_geyser.setElementState(false);
+						break;
+					}
+					default:
+						break;
+					}
+
+					open_ttl -= 1;		//Decrement open-loop control time-to-live
+					if(open_ttl <= 0)	//If ttl runs out, switch back to closed-loop control
+						control_mode = ControlMode.CLOSED;
+
+					break;
+				}
+				}
+
+				/* -----------------------------------------------------------------------------*/
+
+
 			} catch(Exception e){
 				System.out.println("Socekt timed out, or inbound message was corrupt.");
 			}
